@@ -5,8 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProcessedStudent } from "@/types/student";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface StudentTableProps {
   students: ProcessedStudent[];
@@ -15,6 +17,8 @@ interface StudentTableProps {
 export function StudentTable({ students }: StudentTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<ProcessedStudent | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const studentsPerPage = 100;
 
   const filteredStudents = students.filter(
     (student) =>
@@ -22,46 +26,114 @@ export function StudentTable({ students }: StudentTableProps) {
       student.cpf.includes(searchTerm)
   );
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const startIndex = (currentPage - 1) * studentsPerPage;
+  const endIndex = startIndex + studentsPerPage;
+  const currentStudents = filteredStudents.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "OK":
-        return <Badge className="bg-success text-success-foreground">✅ OK</Badge>;
-      case "X":
-        return <Badge variant="destructive">❌ Pendente</Badge>;
-      default:
-        return <Badge variant="secondary">⚠️ N/E</Badge>;
-    }
+    const getTooltipText = (status: string) => {
+      switch (status) {
+        case "OK":
+          return "Status aprovado - Requisito atendido";
+        case "X":
+          return "Status pendente - Requisito não atendido";
+        default:
+          return "Não encontrado - Informação não disponível";
+      }
+    };
+
+    const badgeElement = (() => {
+      switch (status) {
+        case "OK":
+          return <Badge className="bg-success text-success-foreground">✅ OK</Badge>;
+        case "X":
+          return <Badge variant="destructive">❌ Pendente</Badge>;
+        default:
+          return <Badge variant="secondary">⚠️ N/E</Badge>;
+      }
+    })();
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {badgeElement}
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{getTooltipText(status)}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
   };
 
   const getInadimplenciaBadge = (categoria: string) => {
-    switch (categoria) {
-      case "Em dia":
-        return <Badge className="bg-success text-success-foreground">Em dia</Badge>;
-      case "Atraso leve":
-        return <Badge className="bg-warning text-warning-foreground">Atraso leve</Badge>;
-      case "Atraso médio":
-        return <Badge variant="secondary">Atraso médio</Badge>;
-      default:
-        return <Badge variant="destructive">Inadimplente</Badge>;
-    }
+    const getTooltipText = (categoria: string) => {
+      switch (categoria) {
+        case "Em dia":
+          return "100% das cobranças pagas - Situação regular";
+        case "Atraso leve":
+          return "80-99% das cobranças pagas - Atraso pequeno";
+        case "Atraso médio":
+          return "50-79% das cobranças pagas - Necessita atenção";
+        default:
+          return "Menos de 50% das cobranças pagas - Situação crítica";
+      }
+    };
+
+    const badgeElement = (() => {
+      switch (categoria) {
+        case "Em dia":
+          return <Badge className="bg-success text-success-foreground">Em dia</Badge>;
+        case "Atraso leve":
+          return <Badge className="bg-warning text-warning-foreground">Atraso leve</Badge>;
+        case "Atraso médio":
+          return <Badge variant="secondary">Atraso médio</Badge>;
+        default:
+          return <Badge variant="destructive">Inadimplente</Badge>;
+      }
+    })();
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {badgeElement}
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{getTooltipText(categoria)}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
   };
 
   return (
-    <Card className="shadow-medium border-0">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-lg font-semibold">Lista de Alunos</CardTitle>
-          <div className="relative w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome ou CPF..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full sm:w-80"
-            />
+    <TooltipProvider>
+      <Card className="shadow-medium border-0">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="text-lg font-semibold">Lista de Alunos</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredStudents.length)} de {filteredStudents.length} alunos
+              </p>
+            </div>
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar por nome ou CPF..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10 w-full sm:w-80"
+              />
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
       <CardContent>
         <div className="rounded-md border overflow-x-auto">
           <Table>
@@ -77,8 +149,8 @@ export function StudentTable({ students }: StudentTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStudents.map((student, index) => (
-                <TableRow key={index}>
+              {currentStudents.map((student, index) => (
+                <TableRow key={startIndex + index}>
                   <TableCell className="font-medium">{student.nome}</TableCell>
                   <TableCell className="font-mono text-sm">{student.cpf}</TableCell>
                   <TableCell className="text-sm">{student.curso}</TableCell>
@@ -175,7 +247,89 @@ export function StudentTable({ students }: StudentTableProps) {
             {searchTerm ? "Nenhum aluno encontrado com os critérios de busca." : "Nenhum aluno cadastrado."}
           </div>
         )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                
+                {/* First page */}
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Ellipsis */}
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <span className="px-3 py-2">...</span>
+                  </PaginationItem>
+                )}
+                
+                {/* Current page range */}
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                  const pageNumber = Math.max(1, Math.min(totalPages - 2, currentPage - 1)) + i;
+                  if (pageNumber > totalPages) return null;
+                  
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink 
+                        href="#" 
+                        isActive={pageNumber === currentPage}
+                        onClick={(e) => { e.preventDefault(); setCurrentPage(pageNumber); }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                {/* Ellipsis */}
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <span className="px-3 py-2">...</span>
+                  </PaginationItem>
+                )}
+                
+                {/* Last page */}
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 }
