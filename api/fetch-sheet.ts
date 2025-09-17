@@ -10,7 +10,7 @@ export default async function handler(request: Request) {
   try {
     const response = await fetch(SHEET_URL, {
         next: {
-            revalidate: 300 // Adiciona cache de 5 minutos (300 segundos)
+            revalidate: 300 // Adiciona cache de 5 minutos
         }
     });
 
@@ -24,8 +24,8 @@ export default async function handler(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'text/csv',
-        'Access-Control-Allow-Origin': '*', // Permite que o seu frontend acesse
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate' // Cache
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate'
       },
     });
   } catch (error) {

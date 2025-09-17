@@ -11,14 +11,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Database } from "lucide-react";
 
-// Aponta para o nosso endpoint de API que criamos
+// MODIFICADO: Aponta para nosso próprio endpoint
 const API_URL = "/api/fetch-sheet";
 
 const Index = () => {
   const [rawData, setRawData] = useState<StudentData[]>([]);
   const [processedStudents, setProcessedStudents] = useState<ProcessedStudent[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Começa carregando
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const loadDataFromApi = async () => {
@@ -26,7 +26,7 @@ const Index = () => {
     try {
       const response = await fetch(API_URL);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
       const csvText = await response.text();
       const data = convertCsvToJson(csvText);
