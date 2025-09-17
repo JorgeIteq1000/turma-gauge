@@ -1,5 +1,24 @@
 import { StudentData, ProcessedStudent } from "@/types/student";
 
+// Função para converter CSV para JSON
+export function convertCsvToJson(csv: string): StudentData[] {
+  const lines = csv.trim().split('\\n');
+  const headers = lines[0].split(',').map(header => header.trim());
+  const jsonResult: StudentData[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const currentline = lines[i].split(',');
+    const obj: any = {};
+
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentline[j] ? currentline[j].trim() : "";
+    }
+    jsonResult.push(obj as StudentData);
+  }
+  return jsonResult;
+}
+
+
 export function normalizeStatus(value: string): "OK" | "X" | "Não encontrado" {
   const normalized = value.toLowerCase().trim();
   if (normalized === "ok") return "OK";
