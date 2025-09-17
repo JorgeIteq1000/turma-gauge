@@ -4,24 +4,29 @@ export const config = {
   runtime: 'edge',
 };
 
+// Acessa a variável de ambiente do Vercel
 const SHEET_URL = process.env.VITE_SHEET_URL;
 
 export default async function handler(request: Request) {
   if (!SHEET_URL) {
-    return new Response('A URL da planilha não está configurada.', {
+    return new Response('A variável de ambiente VITE_SHEET_URL não foi configurada no Vercel.', {
       status: 500,
     });
   }
 
   try {
-    const response = await fetch(SHEET_URL, {
+    // Adiciona um timestamp para evitar o cache da Vercel
+    const url = new URL(SHEET_URL);
+    url.searchParams.set('_cacheBust', new Date().getTime().toString());
+
+    const response = await fetch(url.toString(), {
         next: {
-            revalidate: 300 // Adiciona cache de 5 minutos
+            revalidate: 300 // Mantém um cache de 5 minutos
         }
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Erro ao buscar a planilha: ${response.statusText}`);
     }
 
     const csvText = await response.text();
@@ -35,8 +40,8 @@ export default async function handler(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Failed to fetch sheet data:', error);
-    return new Response('Error fetching sheet data.', {
+    console.error('Falha ao buscar dados da planilha:', error);
+    return new Response(`Erro ao processar a requisição: ${error.message}`, {
       status: 500,
     });
   }
