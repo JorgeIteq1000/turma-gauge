@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { StudentData, ProcessedStudent, DashboardMetrics } from "@/types/student";
-import { processStudentData, calculateMetrics, convertCsvToJson } from "@/utils/dataProcessor";
+import { processStudentData, calculateMetrics } from "@/utils/dataProcessor";
 import { DataImport } from "@/components/dashboard/DataImport";
 import { KPICards } from "@/components/dashboard/KPICards";
 import { StatusChart } from "@/components/dashboard/StatusChart";
@@ -10,73 +10,32 @@ import { StudentTable } from "@/components/dashboard/StudentTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Database, AlertTriangle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-const API_URL = "/api/fetch-sheet";
 
 const Index = () => {
-  const [rawData, setRawData] = useState<StudentData[]>([]);
   const [processedStudents, setProcessedStudents] = useState<ProcessedStudent[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const { toast } = useToast();
-
-  const loadDataFromApi = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_URL}?_=${new Date().getTime()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const csvText = await response.text();
-      const data = convertCsvToJson(csvText);
-      handleDataLoaded(data);
-      toast({
-        title: "Dados carregados",
-        description: "Os dados foram carregados com sucesso!",
-      });
-    } catch (error) {
-      console.error("Erro ao carregar dados da API:", error);
-      setError("Não foi possível carregar os dados do Google Sheets. Verifique a conexão e as permissões da planilha.");
-      setIsLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar dados",
-        description: "Não foi possível buscar os dados da planilha.",
-      });
-    }
-  };
-
-  useEffect(() => {
-    loadDataFromApi();
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (rawData.length > 0) {
-        loadDataFromApi();
-      }
-    }, 15 * 60 * 1000); // 15 minutes
-
-    return () => clearInterval(interval);
-  }, [rawData]);
 
   const handleDataLoaded = (data: StudentData[]) => {
-    setIsLoading(true);
-    setRawData(data);
-
-    setTimeout(() => {
+    try {
+      if (!data || data.length === 0) {
+        throw new Error("Nenhum dado recebido da planilha. Verifique o formato e o conteúdo.");
+      }
       const processed = processStudentData(data);
       const calculatedMetrics = calculateMetrics(processed);
-
+      
       setProcessedStudents(processed);
       setMetrics(calculatedMetrics);
       setLastUpdate(new Date());
-      setIsLoading(false);
-    }, 1000);
+      setError(null);
+    } catch (e) {
+      console.error("Erro ao processar os dados:", e);
+      setError(e.message);
+      setProcessedStudents([]);
+      setMetrics(null);
+    }
   };
 
   if (isLoading && !error) {
@@ -145,7 +104,11 @@ const Index = () => {
           )}
         </header>
 
-        <DataImport onDataLoaded={handleDataLoaded} isLoading={isLoading} />
+        <DataImport 
+          onDataLoaded={handleDataLoaded} 
+          isLoading={isLoading}
+          onLoadingChange={setIsLoading}
+        />
 
         {error && (
             <Card className="shadow-medium border-destructive bg-destructive/10">
