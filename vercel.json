@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/fetch-sheet",
+      "destination": "/api/fetch-sheet"
+    }
+  ]
+}

@@ -25,6 +25,7 @@ export default async function handler(request: Request) {
       headers: {
         'Content-Type': 'text/csv',
         'Access-Control-Allow-Origin': '*', // Permite que o seu frontend acesse
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate' // Cache
       },
     });
   } catch (error) {
