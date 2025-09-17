@@ -9,9 +9,9 @@ import { ProgressAnalysis } from "@/components/dashboard/ProgressAnalysis";
 import { StudentTable } from "@/components/dashboard/StudentTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Database } from "lucide-react";
+import { Clock, Database, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// MODIFICADO: A URL base continua a mesma
 const API_URL = "/api/fetch-sheet";
 
 const Index = () => {
@@ -19,12 +19,14 @@ const Index = () => {
   const [processedStudents, setProcessedStudents] = useState<ProcessedStudent[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const { toast } = useToast();
 
   const loadDataFromApi = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // MODIFICAÇÃO: Adicionamos um timestamp para evitar o cache
       const response = await fetch(`${API_URL}?_=${new Date().getTime()}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -32,43 +34,44 @@ const Index = () => {
       const csvText = await response.text();
       const data = convertCsvToJson(csvText);
       handleDataLoaded(data);
+      toast({
+        title: "Dados carregados",
+        description: "Os dados foram carregados com sucesso!",
+      });
     } catch (error) {
       console.error("Erro ao carregar dados da API:", error);
+      setError("Não foi possível carregar os dados do Google Sheets. Verifique a conexão e as permissões da planilha.");
       setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar dados",
+        description: "Não foi possível buscar os dados da planilha.",
+      });
     }
   };
-  
-  // Carrega os dados na primeira vez que o componente é montado
+
   useEffect(() => {
     loadDataFromApi();
   }, []);
 
-
-  // Auto-refresh every 15 minutes
   useEffect(() => {
     const interval = setInterval(() => {
       if (rawData.length > 0) {
-        refreshData();
+        loadDataFromApi();
       }
     }, 15 * 60 * 1000); // 15 minutes
 
     return () => clearInterval(interval);
   }, [rawData]);
 
-  const refreshData = () => {
-    if (rawData.length > 0) {
-        loadDataFromApi();
-    }
-  };
-
   const handleDataLoaded = (data: StudentData[]) => {
     setIsLoading(true);
     setRawData(data);
-    
+
     setTimeout(() => {
       const processed = processStudentData(data);
       const calculatedMetrics = calculateMetrics(processed);
-      
+
       setProcessedStudents(processed);
       setMetrics(calculatedMetrics);
       setLastUpdate(new Date());
@@ -76,7 +79,7 @@ const Index = () => {
     }, 1000);
   };
 
-  if (!metrics && isLoading) {
+  if (isLoading && !error) {
     return (
        <div className="min-h-screen bg-background p-4 lg:p-8">
         <div className="max-w-7xl mx-auto">
@@ -111,7 +114,6 @@ const Index = () => {
     );
   }
 
-
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -145,31 +147,29 @@ const Index = () => {
 
         <DataImport onDataLoaded={handleDataLoaded} isLoading={isLoading} />
 
-        {isLoading ? (
-          <Card className="shadow-medium border-0">
-            <CardContent className="p-12 text-center">
-              <div className="space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <h2 className="text-xl font-semibold text-foreground">
-                  Processando dados...
-                </h2>
-                <p className="text-muted-foreground">
-                  Analisando informações dos estudantes
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        {error && (
+            <Card className="shadow-medium border-destructive bg-destructive/10">
+                <CardContent className="p-6 text-center text-destructive">
+                    <div className="space-y-4">
+                        <AlertTriangle className="h-12 w-12 mx-auto" />
+                        <h2 className="text-xl font-semibold">
+                            Erro ao Carregar Dados
+                        </h2>
+                        <p>
+                            {error}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
+        {!isLoading && !error && metrics && (
           <>
-            {metrics && (
-              <>
-                <KPICards metrics={metrics} />
-                <StatusChart students={processedStudents} />
-                <CertificateTimeline students={processedStudents} />
-                <ProgressAnalysis students={processedStudents} />
-                <StudentTable students={processedStudents} />
-              </>
-            )}
+            <KPICards metrics={metrics} />
+            <StatusChart students={processedStudents} />
+            <CertificateTimeline students={processedStudents} />
+            <ProgressAnalysis students={processedStudents} />
+            <StudentTable students={processedStudents} />
           </>
         )}
       </div>

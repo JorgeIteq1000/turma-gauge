@@ -4,9 +4,15 @@ export const config = {
   runtime: 'edge',
 };
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ25AYPgZEudDjhakxxgPNt4IjVlrKWmXzrjgcp7M95YPV23Iib4C7bQ8VAXi_AE49cIfg59Ie9z42X/pub?output=csv";
+const SHEET_URL = process.env.VITE_SHEET_URL;
 
 export default async function handler(request: Request) {
+  if (!SHEET_URL) {
+    return new Response('A URL da planilha não está configurada.', {
+      status: 500,
+    });
+  }
+
   try {
     const response = await fetch(SHEET_URL, {
         next: {
