@@ -1,3 +1,5 @@
+// src/pages/Index.tsx
+
 import { useState, useEffect } from "react";
 import { StudentData, ProcessedStudent, DashboardMetrics } from "@/types/student";
 import { processStudentData, calculateMetrics, convertCsvToJson } from "@/utils/dataProcessor";
@@ -11,7 +13,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Database } from "lucide-react";
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ25AYPgZEudDjhakxxgPNt4IjVlrKWmXzrjgcp7M95YPV23Iib4C7bQ8VAXi_AE49cIfg59Ie9z42X/pub?output=csv";
+// MODIFICADO: Agora aponta para nosso próprio endpoint
+const API_URL = "/api/fetch-sheet";
 
 const Index = () => {
   const [rawData, setRawData] = useState<StudentData[]>([]);
@@ -20,10 +23,10 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true); // Começa carregando
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const loadDataFromUrl = async () => {
+  const loadDataFromApi = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(SHEET_URL);
+      const response = await fetch(API_URL);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -31,14 +34,14 @@ const Index = () => {
       const data = convertCsvToJson(csvText);
       handleDataLoaded(data);
     } catch (error) {
-      console.error("Erro ao carregar dados da URL:", error);
+      console.error("Erro ao carregar dados da API:", error);
       setIsLoading(false);
     }
   };
   
   // Carrega os dados na primeira vez que o componente é montado
   useEffect(() => {
-    loadDataFromUrl();
+    loadDataFromApi();
   }, []);
 
 
@@ -54,19 +57,9 @@ const Index = () => {
   }, [rawData]);
 
   const refreshData = () => {
-    if (rawData.length === 0) return;
-    
-    setIsLoading(true);
-    // Simulate processing time for better UX
-    setTimeout(() => {
-      const processed = processStudentData(rawData);
-      const calculatedMetrics = calculateMetrics(processed);
-      
-      setProcessedStudents(processed);
-      setMetrics(calculatedMetrics);
-      setLastUpdate(new Date());
-      setIsLoading(false);
-    }, 1000);
+    if (rawData.length > 0) {
+        loadDataFromApi();
+    }
   };
 
   const handleDataLoaded = (data: StudentData[]) => {

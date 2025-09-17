@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
+// src/components/dashboard/DataImport.tsx
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Link, RefreshCw } from "lucide-react";
+import { Link, RefreshCw } from "lucide-react";
 import { StudentData } from "@/types/student";
 import { useToast } from "@/hooks/use-toast";
 import { convertCsvToJson } from "@/utils/dataProcessor";
@@ -13,24 +15,15 @@ interface DataImportProps {
   isLoading: boolean;
 }
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ25AYPgZEudDjhakxxgPNt4IjVlrKWmXzrjgcp7M95YPV23Iib4C7bQ8VAXi_AE49cIfg59Ie9z42X/pub?output=csv";
+// MODIFICADO: Aponta para o nosso próprio endpoint
+const API_URL = "/api/fetch-sheet";
 
 export function DataImport({ onDataLoaded, isLoading }: DataImportProps) {
-  const [url, setUrl] = useState(SHEET_URL);
   const { toast } = useToast();
 
   const handleUrlLoad = async () => {
-    if (!url.trim()) {
-      toast({
-        variant: "destructive",
-        title: "URL obrigatória",
-        description: "Por favor, insira uma URL válida",
-      });
-      return;
-    }
-
     try {
-      const response = await fetch(url);
+      const response = await fetch(API_URL);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -38,21 +31,15 @@ export function DataImport({ onDataLoaded, isLoading }: DataImportProps) {
       const data = convertCsvToJson(csvText);
       onDataLoaded(data);
       toast({
-        title: "Dados carregados da URL",
-        description: `${data.length} registros importados`,
+        title: "Dados atualizados",
+        description: `${data.length} registros importados com sucesso!`,
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Erro ao carregar da URL",
-        description: "Verifique se a URL está correta e acessível",
+        title: "Erro ao atualizar",
+        description: "Não foi possível buscar os dados da planilha.",
       });
-    }
-  };
-
-  const handleRefresh = () => {
-    if (url.trim()) {
-      handleUrlLoad();
     }
   };
 
@@ -65,7 +52,7 @@ export function DataImport({ onDataLoaded, isLoading }: DataImportProps) {
             Fonte de Dados (Google Sheets)
           </CardTitle>
           <Button
-            onClick={handleRefresh}
+            onClick={handleUrlLoad}
             disabled={isLoading}
             variant="outline"
             size="sm"
@@ -76,21 +63,6 @@ export function DataImport({ onDataLoaded, isLoading }: DataImportProps) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex gap-2">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="url-input">URL do endpoint CSV</Label>
-            <Input
-              id="url-input"
-              type="url"
-              placeholder="https://exemplo.com/data.csv"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              disabled
-            />
-          </div>
-        </div>
-      </CardContent>
     </Card>
   );
 }
